@@ -82,9 +82,11 @@ if __name__ == "__main__":
     # Listen for a command from the user
     query = takeCommand().lower()
     if "weather" in query:
-        city = "Delhi"  # You can dynamically take the city name from the user
+        speak("Name of the city:")
+        city = takeCommand()
         weather_info = get_weather(city)
         speak(f"The current weather in {city} is {weather_info}")
+
     elif "time" in query:
         current_time = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%I:%M %p')
         speak(f"The current time in India is {current_time}")
