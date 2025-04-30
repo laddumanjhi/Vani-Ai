@@ -3,6 +3,7 @@ import pytz
 import requests
 import pyttsx3
 import speech_recognition as sr
+import wikipedia
 
 # Initialize pyttsx3 engine
 engine = pyttsx3.init('sapi5')
@@ -14,81 +15,104 @@ def speak(audio):
     engine.runAndWait()
 
 def takeCommand():
-    # It takes microphone input from the user and returns string output
-    r = sr.Recognizer()
+    recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         print("Listening...")
-        r.pause_threshold = 1
-        r.energy_threshold = 300
-        r.adjust_for_ambient_noise(source, duration=1)
-        audio = r.listen(source)
+        recognizer.pause_threshold = 1
+        recognizer.energy_threshold = 300
+        recognizer.adjust_for_ambient_noise(source, duration=1)
+        audio = recognizer.listen(source)
 
     try:
-        print("Recognizing...")    
-        query = r.recognize_google(audio, language='en-US')
-        print(f"User said: {query}\n")
-
+        print("Recognizing...")
+        query = recognizer.recognize_google(audio, language='en-US')
+        print(f"User said: {query}")
+        return query
     except sr.UnknownValueError:
         print("Sorry, I couldn't understand that...")
+        speak("Sorry, I didn't catch that.")
         return "None"
     except sr.RequestError:
-        print("Sorry, there was an error with the speech recognition service...")
+        print("Speech recognition service error.")
+        speak("There was an issue with the speech recognition service.")
         return "None"
     except Exception as e:
-        print("Say that again please...")  
+        print("Error:", e)
+        speak("Say that again please.")
         return "None"
-    return query
 
 def get_weather(city_name):
     api_key = "6a2b433a42668ac64b73a1c16d12d531"  # Your API key
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
-    
     complete_url = f"{base_url}appid={api_key}&q={city_name}&units=metric"
+
     response = requests.get(complete_url)
     data = response.json()
 
     if data["cod"] != "404":
-        weather_main = data["main"]
-        temperature = weather_main["temp"]
+        temperature = data["main"]["temp"]
         description = data["weather"][0]["description"]
         return f"{temperature}°C, {description.capitalize()}"
     else:
         return "Weather data not available!"
 
 def greet_user():
-    # 1. Hello master Vani here
-    speak("Hello master Vani here")
+    speak("Hello master, Vani here")
 
-    # 2. Present day
     today = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%A, %d %B %Y')
     speak(f"Today is: {today}")
 
-    # 3. Present time according to India
     current_time = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%I:%M %p')
-    speak(f"Current time of awor location : {current_time}")
+    speak(f"Current time of our location: {current_time}")
 
-    # 4. Weather outside (real)
-    city = "bhopal"  # you can change the city name
+    city = "Bhopal"  # You can change this
     weather = get_weather(city)
     speak(f"Weather in {city}: {weather}")
 
-    # 5. How can I help you today?
     speak("How can I help you today?")
+
+def search_wikipedia(query, sentences=2, lang='en'):
+    try:
+        wikipedia.set_lang(lang)
+        summary = wikipedia.summary(query, sentences=sentences)
+        return summary
+    except wikipedia.DisambiguationError as e:
+        return f"There are multiple results for '{query}': {', '.join(e.options[:3])}"
+    except wikipedia.PageError:
+        return f"I couldn't find any page for '{query}'."
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
 # Main function
 if __name__ == "__main__":
     greet_user()
 
-    # Listen for a command from the user
-    query = takeCommand().lower()
-    if "weather" in query:
-        speak("Name of the city:")
-        city = takeCommand()
-        weather_info = get_weather(city)
-        speak(f"The current weather in {city} is {weather_info}")
+    while True:
+        query = takeCommand().lower()
 
-    elif "time" in query:
-        current_time = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%I:%M %p')
-        speak(f"The current time in India is {current_time}")
-    else:
-        speak("Sorry, I couldn't understand your request.")
+        if "weather" in query:
+            speak("Name of the city:")
+            city = takeCommand()
+            weather_info = get_weather(city)
+            speak(f"The current weather in {city} is {weather_info}")
+
+        elif "time" in query:
+            current_time = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%I:%M %p')
+            speak(f"The current time in India is {current_time}")
+
+        elif "wikipedia" in query:
+            speak("What should I search on Wikipedia?")
+            search_query = takeCommand()
+            if search_query != "None":
+                summary = search_wikipedia(search_query)
+                print("\nSummary:\n", summary)
+                speak(summary)
+            else:
+                speak("Sorry, I couldn't catch the topic to search.")
+
+        elif "exit" in query or "stop" in query:
+            speak("Goodbye, have a great day!")
+            break
+
+        else:
+            speak("Sorry, I couldn't understand your request. Please try again.")
