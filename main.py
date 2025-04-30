@@ -83,6 +83,22 @@ def search_wikipedia(query, sentences=2, lang='en'):
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
+def remember_thing(thing):
+    with open("memory.txt", "w") as file:
+        file.write(thing)
+    speak("Okay, I will remember that.")
+
+def recall_memory():
+    try:
+        with open("memory.txt", "r") as file:
+            memory = file.read()
+            if memory:
+                speak(f"You asked me to remember: {memory}")
+            else:
+                speak("I don't have anything remembered right now.")
+    except FileNotFoundError:
+        speak("I don't have anything remembered yet.")
+
 # Main function
 if __name__ == "__main__":
     greet_user()
@@ -114,5 +130,15 @@ if __name__ == "__main__":
             speak("Goodbye, have a great day!")
             break
 
+        elif "remember that" in query:
+            speak("What should I remember?")
+            memory = takeCommand()
+            if memory != "None":
+                remember_thing(memory)
+            else:
+                speak("I couldn't catch that to remember.")
+
+        elif "do you remember" in query or "what do you remember" in query:
+            recall_memory()
         else:
             speak("Sorry, I couldn't understand your request. Please try again.")
