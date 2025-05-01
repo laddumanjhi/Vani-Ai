@@ -4,6 +4,7 @@ import requests
 import pyttsx3
 import speech_recognition as sr
 import wikipedia
+import pyaudio
 
 # Initialize pyttsx3 engine
 engine = pyttsx3.init('sapi5')
