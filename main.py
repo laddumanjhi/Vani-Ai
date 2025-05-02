@@ -8,6 +8,9 @@ import pyaudio
 import subprocess
 import webbrowser
 import os
+import time
+import yt_dlp
+import vlc
 
 # Initialize pyttsx3 engine
 engine = pyttsx3.init('sapi5')
@@ -46,10 +49,9 @@ def takeCommand():
         return "None"
 
 def get_weather(city_name):
-    api_key = "6a2b433a42668ac64b73a1c16d12d531"  # Your API key
+    api_key = "6a2b433a42668ac64b73a1c16d12d531"
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
     complete_url = f"{base_url}appid={api_key}&q={city_name}&units=metric"
-
     response = requests.get(complete_url)
     data = response.json()
 
@@ -62,17 +64,13 @@ def get_weather(city_name):
 
 def greet_user():
     speak("Hello master, Vani here")
-
     today = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%A, %d %B %Y')
     speak(f"Today is: {today}")
-
     current_time = datetime.datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%I:%M %p')
     speak(f"Current time of our location: {current_time}")
-
     city = "Bhopal"
     weather = get_weather(city)
     speak(f"Weather in {city}: {weather}")
-
     speak("How can I help you today?")
 
 def search_wikipedia(query, sentences=2, lang='en'):
@@ -103,47 +101,42 @@ def recall_memory():
     except FileNotFoundError:
         speak("I don't have anything remembered yet.")
 
-# Dictionary of applications and their paths
+def play_song_from_youtube(song_name):
+    speak(f"Searching YouTube for {song_name}")
+    try:
+        with yt_dlp.YoutubeDL({'format': 'bestaudio'}) as ydl:
+            info = ydl.extract_info(f"ytsearch:{song_name}", download=False)['entries'][0]
+            url = info['url']
+            title = info['title']
+            speak(f"Playing {title}")
+            print(f"Streaming: {title} | {url}")
+
+            player = vlc.MediaPlayer(url)
+            player.play()
+            time.sleep(2)  # Let VLC start
+
+            while True:
+                state = player.get_state()
+                if state in [vlc.State.Ended, vlc.State.Stopped, vlc.State.Error]:
+                    break
+                time.sleep(1)
+
+    except Exception as e:
+        print("Error while playing song:", e)
+        speak("Sorry, I couldn't play the song.")
+
 apps = {
     "notepad": "notepad.exe",
     "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     "calculator": "calc.exe",
-    "command prompt": "cmd.exe",
+    "cmd": "cmd.exe",
     "paint": "mspaint.exe",
-    "word": r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE",
-    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE",
-    "vs code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
-    "code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
-    "visual studio code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
     "spotify": r"C:\Users\hp5cd\AppData\Roaming\Spotify\Spotify.exe",
-    "microsoft store": r"C:\Program Files\WindowsApps\Microsoft.WindowsStore_8wekyb3d8bbwe\WinStore.App.exe",
-    "camera": "microsoft.windows.camera:",
-    "anydesk": r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe",
-    "arc": r"C:\Program Files\Arc\Arc.exe",
-    "brave": r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
-    "cursor": r"C:\Program Files\WindowsApps\Microsoft.CursorExperience_1.0.0.0_x64__8wekyb3d8bbwe\CursorApp.exe",
-    "davinci resolve": r"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe",
-    "figma": r"C:\Users\hp5cd\AppData\Local\Figma\Figma.exe",
-    "github desktop": r"C:\Users\hp5cd\AppData\Local\GitHubDesktop\GitHubDesktop.exe",
-    "intellij idea": r"C:\Program Files\JetBrains\IntelliJ IDEA 2023.2\bin\idea64.exe",
-    "visual studio": r"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe",
-    "photoshop": r"C:\Program Files\Adobe\Adobe Photoshop 2023\Photoshop.exe",
-    "discord": r"C:\Users\hp5cd\AppData\Local\Discord\app-1.0.9014\Discord.exe",
-    "zoom": r"C:\Users\hp5cd\AppData\Roaming\Zoom\bin\Zoom.exe",
-    "slack": r"C:\Users\hp5cd\AppData\Local\slack\slack.exe",
-    "teams": r"C:\Users\hp5cd\AppData\Local\Microsoft\Teams\current\Teams.exe",
-    "notion": r"C:\Users\hp5cd\AppData\Local\Notion\Notion.exe",
-    "telegram": r"C:\Users\hp5cd\AppData\Roaming\Telegram Desktop\Telegram.exe",
-    "edge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-    "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
-    "vscode": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
-    "steam": r"C:\Program Files (x86)\Steam\steam.exe",
-    "blender": r"C:\Program Files\Blender Foundation\Blender\blender.exe",
-    "audacity": r"C:\Program Files (x86)\Audacity\audacity.exe",
-    "whatsapp": r"C:\Users\hp5cd\AppData\Local\WhatsApp\WhatsApp.exe"
+    "vs code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
+    "word": r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE",
+    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
+    # Add more apps as needed
 }
-
-
 
 def open_app(app_name):
     for key in apps:
@@ -158,7 +151,7 @@ def open_app(app_name):
                 return
     speak("Sorry, I couldn't find that application.")
 
-# Main function
+# Main logic
 if __name__ == "__main__":
     greet_user()
 
@@ -188,6 +181,16 @@ if __name__ == "__main__":
         elif "open youtube" in query:
             speak("Opening YouTube for you.")
             webbrowser.open("https://www.youtube.com")
+
+        elif query.startswith("play"):
+            song_name = query.replace("play", "").replace("song", "").replace("on youtube", "").strip()
+            if song_name:
+                play_song_from_youtube(song_name)
+            else:
+                speak("Which song should I play?")
+                song_name = takeCommand()
+                if song_name != "None":
+                    play_song_from_youtube(song_name)
 
         elif "open" in query:
             open_app(query)
