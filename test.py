@@ -11,15 +11,134 @@ import os
 import time
 import yt_dlp
 import vlc
+import threading
+import queue
 
 # Initialize pyttsx3 engine
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[1].id)
 
+# Create a thread lock for the speech engine
+speak_lock = threading.Lock()
+
+# Global variables for music control
+current_player = None
+player_lock = threading.Lock()
+current_song_title = None
+
 def speak(audio):
-    engine.say(audio)
-    engine.runAndWait()
+    with speak_lock:
+        try:
+            engine.say(audio)
+            engine.runAndWait()
+        except RuntimeError:
+            time.sleep(0.5)
+            try:
+                engine.say(audio)
+                engine.runAndWait()
+            except:
+                print(f"Could not speak: {audio}")
+
+def stop_current_song():
+    global current_player, current_song_title
+    with player_lock:
+        if current_player:
+            current_player.stop()
+            current_player = None
+            current_song_title = None
+
+def pause_playback():
+    global current_player
+    with player_lock:
+        if current_player:
+            current_player.pause()
+            return True
+    return False
+
+def resume_playback():
+    global current_player
+    with player_lock:
+        if current_player:
+            current_player.play()
+            return True
+    return False
+
+def get_playback_status():
+    global current_player, current_song_title
+    with player_lock:
+        if current_player:
+            state = current_player.get_state()
+            if state == vlc.State.Playing:
+                return f"Playing: {current_song_title}"
+            elif state == vlc.State.Paused:
+                return f"Paused: {current_song_title}"
+            else:
+                return "No song is currently playing"
+        return "No song is currently playing"
+
+def play_song_from_youtube(song_name):
+    global current_player, current_song_title
+    
+    # Stop any currently playing song
+    stop_current_song()
+    
+    try:
+        # Configure yt-dlp options
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': False
+        }
+        
+        # Search for the song
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            print("Searching for song...")
+            info = ydl.extract_info(f"ytsearch:{song_name}", download=False)['entries'][0]
+            url = info.get('url')
+            title = info.get('title')
+            
+            if not url:
+                print("Could not get song URL")
+                speak("Sorry, I couldn't find that song")
+                return
+                
+            print(f"\nPlaying: {title}")
+            speak(f"Playing {title}")
+            current_song_title = title
+            
+            # Create and start the media player in a separate thread
+            def play_audio():
+                global current_player
+                with player_lock:
+                    instance = vlc.Instance()
+                    current_player = instance.media_player_new()
+                    media = instance.media_new(url)
+                    current_player.set_media(media)
+                    current_player.play()
+                
+                # Monitor playback
+                time.sleep(2)  # Give VLC time to start
+                while True:
+                    with player_lock:
+                        if not current_player:
+                            break
+                        state = current_player.get_state()
+                        if state in [vlc.State.Ended, vlc.State.Error, vlc.State.Stopped]:
+                            current_player = None
+                            current_song_title = None
+                            break
+                    time.sleep(1)
+            
+            # Start playback thread
+            play_thread = threading.Thread(target=play_audio)
+            play_thread.daemon = True
+            play_thread.start()
+            
+    except Exception as e:
+        print(f"Error playing song: {e}")
+        speak("Sorry, I couldn't play that song")
 
 def takeCommand():
     recognizer = sr.Recognizer()
@@ -36,8 +155,7 @@ def takeCommand():
         print(f"User said: {query}")
         return query
     except sr.UnknownValueError:
-        print("Sorry, I couldn't understand that...")
-        speak("Sorry, I didn't catch that.")
+        speak("I didn't understand that. Could you please repeat?")
         return "None"
     except sr.RequestError:
         print("Speech recognition service error.")
@@ -100,30 +218,6 @@ def recall_memory():
                 speak("I don't have anything remembered right now.")
     except FileNotFoundError:
         speak("I don't have anything remembered yet.")
-
-def play_song_from_youtube(song_name):
-    speak(f"Searching YouTube for {song_name}")
-    try:
-        with yt_dlp.YoutubeDL({'format': 'bestaudio'}) as ydl:
-            info = ydl.extract_info(f"ytsearch:{song_name}", download=False)['entries'][0]
-            url = info['url']
-            title = info['title']
-            speak(f"Playing {title}")
-            print(f"Streaming: {title} | {url}")
-
-            player = vlc.MediaPlayer(url)
-            player.play()
-            time.sleep(2)  # Let VLC start
-
-            while True:
-                state = player.get_state()
-                if state in [vlc.State.Ended, vlc.State.Stopped, vlc.State.Error]:
-                    break
-                time.sleep(1)
-
-    except Exception as e:
-        print("Error while playing song:", e)
-        speak("Sorry, I couldn't play the song.")
 
 apps = {
     "notepad": "notepad.exe",
@@ -210,5 +304,24 @@ if __name__ == "__main__":
         elif "do you remember" in query or "what do you remember" in query:
             recall_memory()
 
-        else:
-            speak("Sorry, I couldn't understand your request. Please try again.")
+        elif "pause" in query or "pause music" in query or "pause song" in query:
+            if pause_playback():
+                speak("Playback paused")
+            else:
+                speak("No song is currently playing")
+
+        elif "resume" in query or "resume music" in query or "resume song" in query:
+            if resume_playback():
+                speak("Resuming playback")
+            else:
+                speak("No song is paused")
+
+        elif "stop music" in query or "stop song" in query:
+            stop_current_song()
+            speak("Music stopped")
+
+        elif "what's playing" in query or "what song is playing" in query or "current song" in query:
+            status = get_playback_status()
+            speak(status)
+
+
