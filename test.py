@@ -375,10 +375,16 @@ if __name__ == "__main__":
                 print(response)
                 speak(response)
 
+        elif any(phrase in query for phrase in ["who created you", "who made you", "how were you created", "who developed you"]):
+            creator_response = "I was created by Veerendra Vishwakarma, also known as The Codex. He is a talented developer who built me to be a helpful AI assistant."
+            print(creator_response)
+            speak(creator_response)
+
         # Remove the specific chat triggers and make chat the default behavior
         elif any(keyword in query for keyword in [
             "exit", "stop", "weather", "time", "wikipedia", "open youtube",
-            "play", "pause", "resume", "remember that", "do you remember"
+            "play", "pause", "resume", "remember that", "do you remember",
+            "who created you", "who made you", "how were you created", "who developed you"
         ]):
             continue  # Let the existing commands handle these queries
         else:
