@@ -13,6 +13,36 @@ import yt_dlp
 import vlc
 import threading
 import queue
+import google.generativeai as genai
+
+# Gemini API configuration
+GOOGLE_API_KEY = "AIzaSyDMJPxYhVOvZFwvYQ0UEvx9IEJyULgYyrU"  # Replace with your actual API key
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('models/gemini-1.5-flash')
+
+# Initialize chat history
+chat_history = []
+
+def chat_with_gemini(prompt):
+    try:
+        # Add personality and context to the prompt
+        system_prompt = """You are Vani, a friendly and helpful AI assistant with a warm personality. 
+        You engage in natural conversation while also being able to help with tasks. 
+        Keep responses concise and conversational. If you're not sure about something, just say so."""
+        
+        # Maintain conversation context
+        chat_history.append(prompt)
+        if len(chat_history) > 10:  # Keep last 10 exchanges for context
+            chat_history.pop(0)
+        
+        context_prompt = f"{system_prompt}\n\nRecent conversation context:\n{' -> '.join(chat_history[-3:])}\n\nCurrent query: {prompt}"
+        
+        response = model.generate_content(context_prompt)
+        chat_history.append(response.text)  # Store response in history
+        
+        return response.text
+    except Exception as e:
+        return f"Sorry, I encountered an error: {str(e)}"
 
 # Initialize pyttsx3 engine
 engine = pyttsx3.init('sapi5')
@@ -323,5 +353,39 @@ if __name__ == "__main__":
         elif "what's playing" in query or "what song is playing" in query or "current song" in query:
             status = get_playback_status()
             speak(status)
+
+        elif "tell me a joke" in query or "make me laugh" in query:
+            response = chat_with_gemini("Tell me a family-friendly joke")
+            print(response)
+            speak(response)
+
+        elif "let's chat" in query or "can we talk" in query:
+            speak("Sure! What would you like to talk about?")
+            chat_topic = takeCommand()
+            if chat_topic != "None":
+                response = chat_with_gemini(f"Let's have a friendly conversation about: {chat_topic}")
+                print(response)
+                speak(response)
+
+        elif "ask gemini" in query:
+            speak("What would you like to ask?")
+            user_question = takeCommand()
+            if user_question != "None":
+                response = chat_with_gemini(user_question)
+                print(response)
+                speak(response)
+
+        # Remove the specific chat triggers and make chat the default behavior
+        elif any(keyword in query for keyword in [
+            "exit", "stop", "weather", "time", "wikipedia", "open youtube",
+            "play", "pause", "resume", "remember that", "do you remember"
+        ]):
+            continue  # Let the existing commands handle these queries
+        else:
+            # Any other query will be treated as a conversation with Gemini
+            if query != "None":
+                response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
+                print(response)
+                speak(response)
 
 
