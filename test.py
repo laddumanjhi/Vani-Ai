@@ -14,7 +14,37 @@ import vlc
 import threading
 import queue
 import google.generativeai as genai
+import PyPDF2
+import pyautogui
+import pytesseract
+from PIL import Image
 from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
+
+def check_tesseract_installation():
+    common_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        os.path.join(os.environ.get('PROGRAMFILES', ''), 'Tesseract-OCR', 'tesseract.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Tesseract-OCR', 'tesseract.exe')
+    ]
+    
+    # First check if tesseract is in PATH
+    from shutil import which
+    tesseract_cmd = which('tesseract')
+    if tesseract_cmd:
+        return tesseract_cmd
+        
+    # Then check common installation paths
+    for path in common_paths:
+        if os.path.isfile(path):
+            return path
+            
+    return None
+
+# Try to find and configure Tesseract path
+tesseract_path = check_tesseract_installation()
+if tesseract_path:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 # Gemini API configuration
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -274,6 +304,81 @@ def open_app(app_name):
                 return
     speak("Sorry, I couldn't find that application.")
 
+def read_file(file_path):
+    try:
+        if file_path.endswith('.txt'):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+                print("\n--- Text File Content ---\n")
+                print(content)
+                speak("Here's the content of your text file")
+                speak(content)
+
+        elif file_path.endswith('.pdf'):
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                print("\n--- PDF File Content ---\n")
+                speak("Reading your PDF file")
+                for page_num, page in enumerate(reader.pages):
+                    text = page.extract_text()
+                    print(f"\n--- Page {page_num + 1} ---\n")
+                    print(text)
+                    speak(f"Page {page_num + 1}")
+                    speak(text)
+
+        else:
+            message = "Unsupported file type. Please provide a .txt or .pdf file."
+            print(message)
+            speak(message)
+    except Exception as e:
+        error_message = f"Error reading file: {str(e)}"
+        print(error_message)
+        speak(error_message)
+
+def read_screen_text():
+    if not tesseract_path:
+        error_message = """Tesseract OCR is not installed or not found. Please follow these steps:
+        1. Download Tesseract OCR installer from: https://github.com/UB-Mannheim/tesseract/wiki
+        2. Run the installer
+        3. Make sure to check 'Add to PATH' during installation
+        4. Restart the application"""
+        print(error_message)
+        speak("Tesseract OCR is not installed. Please install it first.")
+        return
+
+    try:
+        speak("Taking a screenshot to read text")
+        # Take a screenshot
+        screenshot = pyautogui.screenshot()
+        
+        # Save the screenshot temporarily
+        temp_image_path = "temp_screenshot.png"
+        screenshot.save(temp_image_path)
+        
+        try:
+            # Use OCR to extract text
+            text = pytesseract.image_to_string(Image.open(temp_image_path))
+            
+            if text.strip():
+                print("\n--- Text Found on Screen ---\n")
+                print(text)
+                speak("Here's the text I found on your screen")
+                speak(text)
+            else:
+                message = "No readable text found on the screen"
+                print(message)
+                speak(message)
+                
+        finally:
+            # Always try to remove the temporary file
+            if os.path.exists(temp_image_path):
+                os.remove(temp_image_path)
+            
+    except Exception as e:
+        error_message = f"Error reading screen text: {str(e)}"
+        print(error_message)
+        speak(error_message)
+
 # Main logic
 if __name__ == "__main__":
     greet_user()
@@ -378,6 +483,15 @@ if __name__ == "__main__":
             creator_response = "I was created by Veerendra Vishwakarma, also known as The Codex. He is a talented developer who built me to be a helpful AI assistant."
             print(creator_response)
             speak(creator_response)
+
+        elif "read file" in query:
+            speak("Please provide the path to the file you want me to read")
+            file_path = takeCommand()
+            if file_path != "None":
+                read_file(file_path)
+
+        elif "read screen" in query or "read screen text" in query or "read my screen" in query:
+            read_screen_text()
 
         # Remove the specific chat triggers and make chat the default behavior
         elif any(keyword in query for keyword in [

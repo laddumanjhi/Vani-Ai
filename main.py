@@ -29,7 +29,6 @@ def chat_with_gemini(prompt):
         system_prompt = """You are Vani, a friendly and helpful AI assistant with a warm personality. 
         You engage in natural conversation while also being able to help with tasks. 
         Keep responses concise and conversational. If you're not sure about something, just say so."""
-        
         # Maintain conversation context
         chat_history.append(prompt)
         if len(chat_history) > 10:  # Keep last 10 exchanges for context
