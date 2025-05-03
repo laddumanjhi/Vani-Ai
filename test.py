@@ -14,9 +14,9 @@ import vlc
 import threading
 import queue
 import google.generativeai as genai
+from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
 
 # Gemini API configuration
-GOOGLE_API_KEY = "AIzaSyDMJPxYhVOvZFwvYQ0UEvx9IEJyULgYyrU"  # Replace with your actual API key
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('models/gemini-1.5-flash')
 
@@ -197,9 +197,8 @@ def takeCommand():
         return "None"
 
 def get_weather(city_name):
-    api_key = "6a2b433a42668ac64b73a1c16d12d531"
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
-    complete_url = f"{base_url}appid={api_key}&q={city_name}&units=metric"
+    complete_url = f"{base_url}appid={OPENWEATHER_API_KEY}&q={city_name}&units=metric"
     response = requests.get(complete_url)
     data = response.json()
 
