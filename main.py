@@ -19,6 +19,7 @@ import pyautogui
 import pytesseract
 from PIL import Image
 from deep_translator import GoogleTranslator
+from gtts import gTTS
 from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
 
 def check_tesseract_installation():
@@ -435,24 +436,59 @@ def get_voice_for_language(language_code):
     # Return default voice if no match found
     return voices[1].id
 
+def speak_with_gtts(text, lang='en'):
+    """
+    Speak text using Google Text-to-Speech with support for multiple languages.
+    """
+    try:
+        # Create temporary file path
+        temp_file = "temp_speech.mp3"
+        
+        # Generate speech
+        tts = gTTS(text=text, lang=lang, slow=False)
+        tts.save(temp_file)
+        
+        # Play the audio using VLC
+        instance = vlc.Instance()
+        player = instance.media_player_new()
+        media = instance.media_new(temp_file)
+        player.set_media(media)
+        player.play()
+        
+        # Wait for audio to finish
+        time.sleep(1)  # Give VLC time to start
+        duration = 0
+        while player.is_playing() and duration < 30:  # Timeout after 30 seconds
+            time.sleep(0.1)
+            duration += 0.1
+            
+        player.stop()
+        
+        # Clean up
+        try:
+            os.remove(temp_file)
+        except:
+            pass
+            
+    except Exception as e:
+        print(f"gTTS speech error: {e}")
+        # Fallback to regular speak function
+        speak(text)
+
 def speak_translation(text, language_code='en'):
     """
-    Speak text using the appropriate voice for the given language.
+    Speak translated text using gTTS for authentic accent in the target language.
+    Always uses gTTS for translations to maintain native accent quality.
     """
-    with speak_lock:
-        try:
-            print(f"Speaking translation in {language_code}: {text}")  # Debug print
-            engine.say(text)
-            engine.runAndWait()
-        except Exception as e:
-            print(f"Translation speech error: {e}")
-            try:
-                # Try one more time
-                time.sleep(0.5)
-                engine.say(text)
-                engine.runAndWait()
-            except Exception as e:
-                print(f"Second translation speech attempt failed: {e}")
+    try:
+        print(f"\nSpeaking translation in {language_code}")
+        print(f"Text: {text}")
+        speak_with_gtts(text, language_code)
+    except Exception as e:
+        print(f"Translation speech error: {e}")
+        # Fallback to regular speak only for English
+        if language_code == 'en':
+            speak(text)
 
 # Main logic
 if __name__ == "__main__":
@@ -572,56 +608,85 @@ if __name__ == "__main__":
             speak("What would you like me to translate?")
             text_to_translate = takeCommand()
             if text_to_translate != "None":
-                speak("Which language should I translate to? For example, say Spanish, French, German, etc.")
+                speak("To which language should I translate? For example, say Hindi, Spanish, Japanese, etc.")
                 target_language = takeCommand().lower()
                 
-                # Map common language names to language codes
+                # Enhanced language code mapping with common variations
                 language_codes = {
-                    'spanish': 'es',
-                    'french': 'fr',
-                    'german': 'de',
-                    'italian': 'it',
-                    'portuguese': 'pt',
-                    'russian': 'ru',
-                    'japanese': 'ja',
-                    'korean': 'ko',
-                    'chinese': 'zh-cn',
+                    # Asian Languages
                     'hindi': 'hi',
-                    'arabic': 'ar',
-                    'bengali': 'bn',
-                    'dutch': 'nl',
-                    'greek': 'el',
-                    'gujarati': 'gu',
-                    'hebrew': 'iw',
-                    'kannada': 'kn',
-                    'malayalam': 'ml',
-                    'marathi': 'mr',
-                    'persian': 'fa',
-                    'punjabi': 'pa',
+                    'hindustani': 'hi',
+                    'indian': 'hi',
+                    'japanese': 'ja',
+                    'chinese': 'zh-cn',
+                    'mandarin': 'zh-cn',
+                    'korean': 'ko',
+                    'thai': 'th',
+                    'vietnamese': 'vi',
+                    
+                    # Indian Regional Languages
                     'tamil': 'ta',
                     'telugu': 'te',
-                    'thai': 'th',
-                    'turkish': 'tr',
+                    'malayalam': 'ml',
+                    'kannada': 'kn',
+                    'bengali': 'bn',
+                    'marathi': 'mr',
+                    'gujarati': 'gu',
+                    'punjabi': 'pa',
                     'urdu': 'ur',
-                    'vietnamese': 'vi'
+                    
+                    # European Languages
+                    'spanish': 'es',
+                    'español': 'es',
+                    'french': 'fr',
+                    'français': 'fr',
+                    'german': 'de',
+                    'deutsch': 'de',
+                    'italian': 'it',
+                    'italiano': 'it',
+                    'portuguese': 'pt',
+                    'português': 'pt',
+                    'russian': 'ru',
+                    'dutch': 'nl',
+                    'greek': 'el',
+                    
+                    # Middle Eastern Languages
+                    'arabic': 'ar',
+                    'persian': 'fa',
+                    'farsi': 'fa',
+                    'turkish': 'tr',
+                    'hebrew': 'iw',
+                    
+                    # Other Languages
+                    'english': 'en',
+                    'indonesian': 'id',
+                    'malay': 'ms',
+                    'filipino': 'tl',
+                    'tagalog': 'tl'
                 }
                 
                 # Get the language code or use the spoken language name as code
                 target_lang = language_codes.get(target_language, target_language)
                 
                 try:
+                    # First, confirm the translation language
+                    language_name = next((name for name, code in language_codes.items() if code == target_lang), target_lang)
+                    speak(f"Translating to {language_name}")
+                    
                     result = translate_text(text_to_translate, target_lang)
                     if isinstance(result, dict):
                         translated_text = result['translated_text']
                         source_lang = result['source_lang']
+                        
                         print(f"\nOriginal ({source_lang}): {text_to_translate}")
                         print(f"Translated ({target_lang}): {translated_text}")
                         
-                        # Speak both the original and translated text
-                        speak("The translation is")
+                        # First announce in English what we're going to do
+                        speak("Here's your translation")
                         time.sleep(0.5)  # Add a small pause
-                        speak_translation(translated_text)
                         
+                        # Then speak the translation in the target language with native accent
+                        speak_translation(translated_text, target_lang)
                     else:
                         speak(result)  # This will be the error message
                 except Exception as e:
