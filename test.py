@@ -18,6 +18,7 @@ import PyPDF2
 import pyautogui
 import pytesseract
 from PIL import Image
+from deep_translator import GoogleTranslator
 from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
 
 def check_tesseract_installation():
@@ -78,6 +79,8 @@ def chat_with_gemini(prompt):
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[1].id)
+engine.setProperty('rate', 150)  # Speed of speech
+engine.setProperty('volume', 1.0)  # Volume level
 
 # Create a thread lock for the speech engine
 speak_lock = threading.Lock()
@@ -90,15 +93,17 @@ current_song_title = None
 def speak(audio):
     with speak_lock:
         try:
+            print("Speaking:", audio)  # Debug print
             engine.say(audio)
             engine.runAndWait()
-        except RuntimeError:
+        except Exception as e:
+            print(f"Speech error: {e}")
             time.sleep(0.5)
             try:
                 engine.say(audio)
                 engine.runAndWait()
-            except:
-                print(f"Could not speak: {audio}")
+            except Exception as e:
+                print(f"Second speech attempt failed: {e}")
 
 def stop_current_song():
     global current_player, current_song_title
@@ -379,6 +384,76 @@ def read_screen_text():
         print(error_message)
         speak(error_message)
 
+def translate_text(text, target_lang='en'):
+    """
+    Translates text to the specified target language.
+    :param text: Text to translate
+    :param target_lang: Target language code (e.g., 'es' for Spanish, 'fr' for French)
+    :return: Translated text and source language
+    """
+    try:
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        translation = translator.translate(text)
+        return {
+            'translated_text': translation,
+            'source_lang': translator.source,
+            'pronunciation': getattr(translator, 'pronunciation', None)
+        }
+    except Exception as e:
+        return f"Translation error: {str(e)}"
+
+def get_voice_for_language(language_code):
+    """
+    Get the appropriate voice for the specified language code.
+    Returns the voice ID if found, otherwise returns the default voice.
+    """
+    voices = engine.getProperty('voices')
+    
+    # Map of language codes to common language identifiers in voice names
+    language_identifiers = {
+        'es': ['spanish', 'espanol', 'es-'],
+        'fr': ['french', 'français', 'fr-'],
+        'de': ['german', 'deutsch', 'de-'],
+        'it': ['italian', 'italiano', 'it-'],
+        'pt': ['portuguese', 'português', 'pt-'],
+        'ru': ['russian', 'русский', 'ru-'],
+        'ja': ['japanese', '日本語', 'ja-'],
+        'ko': ['korean', '한국어', 'ko-'],
+        'zh-cn': ['chinese', '中文', 'zh-'],
+        'hi': ['hindi', 'हिंदी', 'hi-'],
+    }
+    
+    # Get identifiers for the requested language
+    identifiers = language_identifiers.get(language_code, [])
+    
+    # Try to find a matching voice
+    for voice in voices:
+        voice_name = voice.name.lower()
+        if any(identifier.lower() in voice_name for identifier in identifiers):
+            return voice.id
+    
+    # Return default voice if no match found
+    return voices[1].id
+
+def speak_translation(text, language_code='en'):
+    """
+    Speak text using the appropriate voice for the given language.
+    """
+    with speak_lock:
+        try:
+            print(f"Speaking translation in {language_code}: {text}")  # Debug print
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            print(f"Translation speech error: {e}")
+            try:
+                # Try one more time
+                time.sleep(0.5)
+                engine.say(text)
+                engine.runAndWait()
+            except Exception as e:
+                print(f"Second translation speech attempt failed: {e}")
+
 # Main logic
 if __name__ == "__main__":
     greet_user()
@@ -492,6 +567,65 @@ if __name__ == "__main__":
 
         elif "read screen" in query or "read screen text" in query or "read my screen" in query:
             read_screen_text()
+
+        elif "translate" in query:
+            speak("What would you like me to translate?")
+            text_to_translate = takeCommand()
+            if text_to_translate != "None":
+                speak("Which language should I translate to? For example, say Spanish, French, German, etc.")
+                target_language = takeCommand().lower()
+                
+                # Map common language names to language codes
+                language_codes = {
+                    'spanish': 'es',
+                    'french': 'fr',
+                    'german': 'de',
+                    'italian': 'it',
+                    'portuguese': 'pt',
+                    'russian': 'ru',
+                    'japanese': 'ja',
+                    'korean': 'ko',
+                    'chinese': 'zh-cn',
+                    'hindi': 'hi',
+                    'arabic': 'ar',
+                    'bengali': 'bn',
+                    'dutch': 'nl',
+                    'greek': 'el',
+                    'gujarati': 'gu',
+                    'hebrew': 'iw',
+                    'kannada': 'kn',
+                    'malayalam': 'ml',
+                    'marathi': 'mr',
+                    'persian': 'fa',
+                    'punjabi': 'pa',
+                    'tamil': 'ta',
+                    'telugu': 'te',
+                    'thai': 'th',
+                    'turkish': 'tr',
+                    'urdu': 'ur',
+                    'vietnamese': 'vi'
+                }
+                
+                # Get the language code or use the spoken language name as code
+                target_lang = language_codes.get(target_language, target_language)
+                
+                try:
+                    result = translate_text(text_to_translate, target_lang)
+                    if isinstance(result, dict):
+                        translated_text = result['translated_text']
+                        source_lang = result['source_lang']
+                        print(f"\nOriginal ({source_lang}): {text_to_translate}")
+                        print(f"Translated ({target_lang}): {translated_text}")
+                        
+                        # Speak both the original and translated text
+                        speak("The translation is")
+                        time.sleep(0.5)  # Add a small pause
+                        speak_translation(translated_text)
+                        
+                    else:
+                        speak(result)  # This will be the error message
+                except Exception as e:
+                    speak(f"Sorry, I encountered an error while translating: {str(e)}")
 
         # Remove the specific chat triggers and make chat the default behavior
         elif any(keyword in query for keyword in [

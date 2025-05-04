@@ -14,7 +14,38 @@ import vlc
 import threading
 import queue
 import google.generativeai as genai
+import PyPDF2
+import pyautogui
+import pytesseract
+from PIL import Image
+from deep_translator import GoogleTranslator
 from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
+
+def check_tesseract_installation():
+    common_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        os.path.join(os.environ.get('PROGRAMFILES', ''), 'Tesseract-OCR', 'tesseract.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Tesseract-OCR', 'tesseract.exe')
+    ]
+    
+    # First check if tesseract is in PATH
+    from shutil import which
+    tesseract_cmd = which('tesseract')
+    if tesseract_cmd:
+        return tesseract_cmd
+        
+    # Then check common installation paths
+    for path in common_paths:
+        if os.path.isfile(path):
+            return path
+            
+    return None
+
+# Try to find and configure Tesseract path
+tesseract_path = check_tesseract_installation()
+if tesseract_path:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 # Gemini API configuration
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -29,6 +60,7 @@ def chat_with_gemini(prompt):
         system_prompt = """You are Vani, a friendly and helpful AI assistant with a warm personality. 
         You engage in natural conversation while also being able to help with tasks. 
         Keep responses concise and conversational. If you're not sure about something, just say so."""
+        
         # Maintain conversation context
         chat_history.append(prompt)
         if len(chat_history) > 10:  # Keep last 10 exchanges for context
@@ -47,6 +79,8 @@ def chat_with_gemini(prompt):
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[1].id)
+engine.setProperty('rate', 150)  # Speed of speech
+engine.setProperty('volume', 1.0)  # Volume level
 
 # Create a thread lock for the speech engine
 speak_lock = threading.Lock()
@@ -59,15 +93,17 @@ current_song_title = None
 def speak(audio):
     with speak_lock:
         try:
+            print("Speaking:", audio)  # Debug print
             engine.say(audio)
             engine.runAndWait()
-        except RuntimeError:
+        except Exception as e:
+            print(f"Speech error: {e}")
             time.sleep(0.5)
             try:
                 engine.say(audio)
                 engine.runAndWait()
-            except:
-                print(f"Could not speak: {audio}")
+            except Exception as e:
+                print(f"Second speech attempt failed: {e}")
 
 def stop_current_song():
     global current_player, current_song_title
@@ -273,6 +309,151 @@ def open_app(app_name):
                 return
     speak("Sorry, I couldn't find that application.")
 
+def read_file(file_path):
+    try:
+        if file_path.endswith('.txt'):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+                print("\n--- Text File Content ---\n")
+                print(content)
+                speak("Here's the content of your text file")
+                speak(content)
+
+        elif file_path.endswith('.pdf'):
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                print("\n--- PDF File Content ---\n")
+                speak("Reading your PDF file")
+                for page_num, page in enumerate(reader.pages):
+                    text = page.extract_text()
+                    print(f"\n--- Page {page_num + 1} ---\n")
+                    print(text)
+                    speak(f"Page {page_num + 1}")
+                    speak(text)
+
+        else:
+            message = "Unsupported file type. Please provide a .txt or .pdf file."
+            print(message)
+            speak(message)
+    except Exception as e:
+        error_message = f"Error reading file: {str(e)}"
+        print(error_message)
+        speak(error_message)
+
+def read_screen_text():
+    if not tesseract_path:
+        error_message = """Tesseract OCR is not installed or not found. Please follow these steps:
+        1. Download Tesseract OCR installer from: https://github.com/UB-Mannheim/tesseract/wiki
+        2. Run the installer
+        3. Make sure to check 'Add to PATH' during installation
+        4. Restart the application"""
+        print(error_message)
+        speak("Tesseract OCR is not installed. Please install it first.")
+        return
+
+    try:
+        speak("Taking a screenshot to read text")
+        # Take a screenshot
+        screenshot = pyautogui.screenshot()
+        
+        # Save the screenshot temporarily
+        temp_image_path = "temp_screenshot.png"
+        screenshot.save(temp_image_path)
+        
+        try:
+            # Use OCR to extract text
+            text = pytesseract.image_to_string(Image.open(temp_image_path))
+            
+            if text.strip():
+                print("\n--- Text Found on Screen ---\n")
+                print(text)
+                speak("Here's the text I found on your screen")
+                speak(text)
+            else:
+                message = "No readable text found on the screen"
+                print(message)
+                speak(message)
+                
+        finally:
+            # Always try to remove the temporary file
+            if os.path.exists(temp_image_path):
+                os.remove(temp_image_path)
+            
+    except Exception as e:
+        error_message = f"Error reading screen text: {str(e)}"
+        print(error_message)
+        speak(error_message)
+
+def translate_text(text, target_lang='en'):
+    """
+    Translates text to the specified target language.
+    :param text: Text to translate
+    :param target_lang: Target language code (e.g., 'es' for Spanish, 'fr' for French)
+    :return: Translated text and source language
+    """
+    try:
+        translator = GoogleTranslator(source='auto', target=target_lang)
+        translation = translator.translate(text)
+        return {
+            'translated_text': translation,
+            'source_lang': translator.source,
+            'pronunciation': getattr(translator, 'pronunciation', None)
+        }
+    except Exception as e:
+        return f"Translation error: {str(e)}"
+
+def get_voice_for_language(language_code):
+    """
+    Get the appropriate voice for the specified language code.
+    Returns the voice ID if found, otherwise returns the default voice.
+    """
+    voices = engine.getProperty('voices')
+    
+    # Map of language codes to common language identifiers in voice names
+    language_identifiers = {
+        'es': ['spanish', 'espanol', 'es-'],
+        'fr': ['french', 'français', 'fr-'],
+        'de': ['german', 'deutsch', 'de-'],
+        'it': ['italian', 'italiano', 'it-'],
+        'pt': ['portuguese', 'português', 'pt-'],
+        'ru': ['russian', 'русский', 'ru-'],
+        'ja': ['japanese', '日本語', 'ja-'],
+        'ko': ['korean', '한국어', 'ko-'],
+        'zh-cn': ['chinese', '中文', 'zh-'],
+        'hi': ['hindi', 'हिंदी', 'hi-'],
+    }
+    
+    # Get identifiers for the requested language
+    identifiers = language_identifiers.get(language_code, [])
+    
+    # Try to find a matching voice
+    for voice in voices:
+        voice_name = voice.name.lower()
+        if any(identifier.lower() in voice_name for identifier in identifiers):
+            return voice.id
+    
+    # Return default voice if no match found
+    return voices[1].id
+
+def speak_translation(text, language_code='en'):
+    """
+    Speak text using the appropriate voice for the given language.
+    """
+    with speak_lock:
+        try:
+            print(f"Speaking translation in {language_code}: {text}")  # Debug print
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            print(f"Translation speech error: {e}")
+            try:
+                # Try one more time
+                time.sleep(0.5)
+                engine.say(text)
+                engine.runAndWait()
+            except Exception as e:
+                print(f"Second translation speech attempt failed: {e}")
+
 # Main logic
 if __name__ == "__main__":
     greet_user()
@@ -377,6 +558,74 @@ if __name__ == "__main__":
             creator_response = "I was created by Veerendra Vishwakarma, also known as The Codex. He is a talented developer who built me to be a helpful AI assistant."
             print(creator_response)
             speak(creator_response)
+
+        elif "read file" in query:
+            speak("Please provide the path to the file you want me to read")
+            file_path = takeCommand()
+            if file_path != "None":
+                read_file(file_path)
+
+        elif "read screen" in query or "read screen text" in query or "read my screen" in query:
+            read_screen_text()
+
+        elif "translate" in query:
+            speak("What would you like me to translate?")
+            text_to_translate = takeCommand()
+            if text_to_translate != "None":
+                speak("Which language should I translate to? For example, say Spanish, French, German, etc.")
+                target_language = takeCommand().lower()
+                
+                # Map common language names to language codes
+                language_codes = {
+                    'spanish': 'es',
+                    'french': 'fr',
+                    'german': 'de',
+                    'italian': 'it',
+                    'portuguese': 'pt',
+                    'russian': 'ru',
+                    'japanese': 'ja',
+                    'korean': 'ko',
+                    'chinese': 'zh-cn',
+                    'hindi': 'hi',
+                    'arabic': 'ar',
+                    'bengali': 'bn',
+                    'dutch': 'nl',
+                    'greek': 'el',
+                    'gujarati': 'gu',
+                    'hebrew': 'iw',
+                    'kannada': 'kn',
+                    'malayalam': 'ml',
+                    'marathi': 'mr',
+                    'persian': 'fa',
+                    'punjabi': 'pa',
+                    'tamil': 'ta',
+                    'telugu': 'te',
+                    'thai': 'th',
+                    'turkish': 'tr',
+                    'urdu': 'ur',
+                    'vietnamese': 'vi'
+                }
+                
+                # Get the language code or use the spoken language name as code
+                target_lang = language_codes.get(target_language, target_language)
+                
+                try:
+                    result = translate_text(text_to_translate, target_lang)
+                    if isinstance(result, dict):
+                        translated_text = result['translated_text']
+                        source_lang = result['source_lang']
+                        print(f"\nOriginal ({source_lang}): {text_to_translate}")
+                        print(f"Translated ({target_lang}): {translated_text}")
+                        
+                        # Speak both the original and translated text
+                        speak("The translation is")
+                        time.sleep(0.5)  # Add a small pause
+                        speak_translation(translated_text)
+                        
+                    else:
+                        speak(result)  # This will be the error message
+                except Exception as e:
+                    speak(f"Sorry, I encountered an error while translating: {str(e)}")
 
         # Remove the specific chat triggers and make chat the default behavior
         elif any(keyword in query for keyword in [
