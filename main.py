@@ -79,7 +79,7 @@ def chat_with_gemini(prompt):
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[1].id)
-engine.setProperty('rate', 150)  # Speed of speech
+engine.setProperty('rate', 175)  # Speed of speech - increased from 150 to 175
 engine.setProperty('volume', 1.0)  # Volume level
 
 # Create a thread lock for the speech engine
