@@ -22,6 +22,29 @@ from deep_translator import GoogleTranslator
 from gtts import gTTS
 from config import GOOGLE_API_KEY, OPENWEATHER_API_KEY
 
+# VLC path detection and configuration
+def find_vlc_path():
+    common_paths = [
+        r'C:\Program Files\VideoLAN\VLC',
+        r'C:\Program Files (x86)\VideoLAN\VLC',
+        os.path.join(os.environ.get('PROGRAMFILES', ''), 'VideoLAN', 'VLC'),
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'VideoLAN', 'VLC')
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+# Try to find and configure VLC path
+vlc_path = find_vlc_path()
+if vlc_path:
+    os.environ['PATH'] = vlc_path + os.pathsep + os.environ['PATH']
+    if not os.path.exists(os.path.join(vlc_path, 'libvlc.dll')):
+        print("Warning: VLC is installed but libvlc.dll not found in the expected location.")
+else:
+    print("Warning: VLC installation not found. Please install VLC Media Player.")
+
 def check_tesseract_installation():
     common_paths = [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',
