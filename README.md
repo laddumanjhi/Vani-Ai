@@ -1,56 +1,83 @@
+# 🔊 Vani – Your Intelligent Voice Assistant
 
-# 🔊 Vani – The Voice of Intelligence
-
-**Vani** is a hybrid AI model that combines the flexibility of Small Language Models (SLM) with the power of advanced pre-trained models. Designed to be efficient, scalable, and smart, Vani is perfect for projects that need adaptable intelligence with manageable deployment.
+**Vani** is an advanced voice-controlled AI assistant that combines speech recognition, natural language processing, and various APIs to provide a comprehensive virtual assistant experience. Built with Python, Vani can understand and respond to voice commands, manage music playback, provide information, and engage in natural conversations.
 
 ---
 
-## 🧠 Key Features
+## 🎯 Key Features
 
-- ⚡ **Hybrid Architecture**: Merges SLMs for lightweight tasks with larger pre-trained models for deeper reasoning.
-- 📦 **Modular & Scalable**: Easily extend or reduce model size based on environment needs.
-- 🛠️ **Customizable**: Fine-tune components independently or together.
-- 🚀 **Efficient Deployment**: Designed for both low-resource and high-performance setups.
+- 🎤 **Voice Control**: Natural voice interaction using speech recognition
+- 🎵 **Music Management**: Play, pause, resume, and control music from YouTube
+- 🌍 **Multilingual Support**: Translation capabilities with native accent pronunciation
+- 📚 **Information Access**: Wikipedia searches, weather updates, and time information
+- 💬 **Natural Conversations**: Powered by Google's Gemini AI for engaging discussions
+- 📝 **File Operations**: Read text files, PDFs, and screen text using OCR
+- 🎮 **System Control**: Open applications and manage system functions
+- 🧠 **Memory System**: Remember and recall information as requested
 
 ---
 
 ## 🔧 Technologies Used
 
 - Python
-- Transformers (e.g., Hugging Face)
-- PyTorch / TensorFlow (based on configuration)
-- Pre-trained LLMs
-- SLM integration logic
+- Speech Recognition (speech_recognition)
+- Text-to-Speech (pyttsx3, gTTS)
+- Google Gemini AI
+- VLC Media Player
+- YouTube-DL
+- PyAutoGUI
+- Tesseract OCR
+- Google Translate API
+- OpenWeather API
+- Wikipedia API
 
 ---
 
 ## 🚀 Getting Started
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/yourusername/vani-ai.git
-   cd vani-ai
-   ```
+1. **Prerequisites**
+   - Python 3.x
+   - VLC Media Player installed
+   - Tesseract OCR installed (for screen text reading)
+   - Google API key for Gemini AI
+   - OpenWeather API key
 
 2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Run the model**
+3. **Configure API Keys**
+   Create a `config.py` file with your API keys:
+   ```python
+   GOOGLE_API_KEY = "your_google_api_key"
+   OPENWEATHER_API_KEY = "your_openweather_api_key"
+   ```
+
+4. **Run Vani**
    ```bash
-   python run_vani.py
+   python main.py
    ```
 
 ---
 
-## 💡 Use Cases
+## 💡 Voice Commands
 
-- Smart virtual assistants
-- Lightweight AI agents
-- Custom chatbots
-- NLP research
-- Educational platforms
+Vani responds to various voice commands including:
+
+- "Play [song name]" - Play music from YouTube
+- "Weather in [city]" - Get weather information
+- "Time" - Get current time
+- "Wikipedia [topic]" - Search Wikipedia
+- "Open [application]" - Launch applications
+- "Translate [text] to [language]" - Translate text
+- "Read file [path]" - Read text/PDF files
+- "Read screen" - Read text from screen
+- "Remember that" - Store information
+- "Do you remember" - Recall stored information
+- "Tell me a joke" - Get a joke
+- "Let's chat" - Start a conversation
+- "Ask Gemini" - Query Gemini AI
 
 ---
 
@@ -63,7 +90,6 @@ The name **Vani** comes from Hindu mythology, symbolizing **speech, wisdom, and 
 ## 🤝 Contributing
 
 Contributions, issues, and suggestions are welcome! Feel free to fork the project and submit a PR.
-
 
 ---
 
