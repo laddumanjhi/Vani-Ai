@@ -110,5 +110,16 @@
 8. **Speech-to-Text & Text-to-Speech**  
    Convert spoken language to text and vice versa, with high accuracy.
 
+### KAJAL
 9. **play video(music,education etc)** 
    give command to play video on youtube and  system downloaded videos
+
+10. **Toggle WiFi, Bluetooth, Flight Mode, and other system settings effortlessly**   
+    Execute commands to turn WiFi, Bluetooth, Flight Mode, and other system settings on or off seamlessly.
+
+11. **Adjust volume and brightness effortlessly with quick controls**
+    Volume & Brightness Control
+    Easily adjust volume and brightness levels to suit your preferences.
+    Or, more concisely:
+    Modify volume and brightness effortlessly. 
+
