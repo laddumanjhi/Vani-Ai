@@ -110,7 +110,7 @@
 8. **Speech-to-Text & Text-to-Speech**  
    Convert spoken language to text and vice versa, with high accuracy.
 
-### KAJAL
+### Laddu
 
 9. **play video(music,education etc)** 
    give command to play video on youtube and  system downloaded videos
