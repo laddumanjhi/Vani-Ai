@@ -123,3 +123,7 @@
     Easily adjust volume and brightness levels to suit your preferences.
     Or, more concisely:
     Modify volume and brightness effortlessly. 
+ 
+12. **take picture and record video**
+    Give a voice command to take a picture and record a video using the system camera.
+    Save or delete any clicked picture using a command
