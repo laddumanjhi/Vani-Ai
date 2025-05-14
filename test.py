@@ -17,6 +17,7 @@ import google.generativeai as genai
 import PyPDF2
 import pyautogui
 import pytesseract
+import re
 from PIL import Image
 from deep_translator import GoogleTranslator
 from gtts import gTTS
@@ -114,17 +115,33 @@ current_player = None
 player_lock = threading.Lock()
 current_song_title = None
 
+def remove_emojis(text):
+    """
+    Remove emojis and other special characters from text.
+    """
+    emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        "]+", flags=re.UNICODE)
+    return emoji_pattern.sub('', text)
+
 def speak(audio):
     with speak_lock:
         try:
-            print("Speaking:", audio)  # Debug print
-            engine.say(audio)
+            # Remove emojis before speaking
+            clean_audio = remove_emojis(audio)
+            print("Speaking:", clean_audio)  # Debug print
+            engine.say(clean_audio)
             engine.runAndWait()
         except Exception as e:
             print(f"Speech error: {e}")
             time.sleep(0.5)
             try:
-                engine.say(audio)
+                engine.say(clean_audio)
                 engine.runAndWait()
             except Exception as e:
                 print(f"Second speech attempt failed: {e}")
@@ -485,11 +502,14 @@ def speak_with_gtts(text, lang='en'):
     Speak text using Google Text-to-Speech with support for multiple languages.
     """
     try:
+        # Remove emojis before generating speech
+        clean_text = remove_emojis(text)
+        
         # Create temporary file path
         temp_file = "temp_speech.mp3"
         
         # Generate speech
-        tts = gTTS(text=text, lang=lang, slow=False)
+        tts = gTTS(text=clean_text, lang=lang, slow=False)
         tts.save(temp_file)
         
         # Play the audio using VLC
@@ -517,7 +537,7 @@ def speak_with_gtts(text, lang='en'):
     except Exception as e:
         print(f"gTTS speech error: {e}")
         # Fallback to regular speak function
-        speak(text)
+        speak(clean_text)
 
 def speak_translation(text, language_code='en'):
     """
