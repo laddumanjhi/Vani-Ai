@@ -17,6 +17,7 @@ import google.generativeai as genai
 import PyPDF2
 import pyautogui
 import pytesseract
+import re
 from PIL import Image
 from deep_translator import GoogleTranslator
 from gtts import gTTS
@@ -114,17 +115,33 @@ current_player = None
 player_lock = threading.Lock()
 current_song_title = None
 
+def remove_emojis(text):
+    """
+    Remove emojis and other special characters from text.
+    """
+    emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        "]+", flags=re.UNICODE)
+    return emoji_pattern.sub('', text)
+
 def speak(audio):
     with speak_lock:
         try:
-            print("Speaking:", audio)  # Debug print
-            engine.say(audio)
+            # Remove emojis before speaking
+            clean_audio = remove_emojis(audio)
+            print("Speaking:", clean_audio)  # Debug print
+            engine.say(clean_audio)
             engine.runAndWait()
         except Exception as e:
             print(f"Speech error: {e}")
             time.sleep(0.5)
             try:
-                engine.say(audio)
+                engine.say(clean_audio)
                 engine.runAndWait()
             except Exception as e:
                 print(f"Second speech attempt failed: {e}")
@@ -316,10 +333,31 @@ apps = {
     "spotify": r"C:\Users\hp5cd\AppData\Roaming\Spotify\Spotify.exe",
     "vs code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
     "word": r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE",
-    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
+    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE",
+    "powerpoint": r"C:\Program Files\Microsoft Office\root\Office16\POWERPNT.EXE",
+    "outlook": r"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE",
+    "edge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
+    "photos": "ms-photos:",
+    "mail": "outlookmail:",
+    "calendar": "outlookcal:",
+    "settings": "ms-settings:",
+    "task manager": "taskmgr.exe",
+    "control panel": "control.exe",
+    "file explorer": "explorer.exe",
+    "powershell": "powershell.exe",
+    "windows media player": "wmplayer.exe",
+    "snipping tool": "SnippingTool.exe",
+    "sticky notes": "StickyNot.exe",
+    "onenote": r"C:\Program Files\Microsoft Office\root\Office16\ONENOTE.EXE",
+    "teams": r"C:\Users\hp5cd\AppData\Local\Microsoft\Teams\current\Teams.exe",
+    "discord": r"C:\Users\hp5cd\AppData\Local\Discord\app-1.0.9003\Discord.exe",
+    "zoom": r"C:\Users\hp5cd\AppData\Roaming\Zoom\bin\Zoom.exe",
+    "adobe reader": r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+    "photoshop": r"C:\Program Files\Adobe\Adobe Photoshop 2023\Photoshop.exe",
+    "illustrator": r"C:\Program Files\Adobe\Adobe Illustrator 2023\Support Files\Contents\Windows\Illustrator.exe"
     # Add more apps as needed
 }
-
 def open_app(app_name):
     for key in apps:
         if key in app_name:
@@ -464,11 +502,14 @@ def speak_with_gtts(text, lang='en'):
     Speak text using Google Text-to-Speech with support for multiple languages.
     """
     try:
+        # Remove emojis before generating speech
+        clean_text = remove_emojis(text)
+        
         # Create temporary file path
         temp_file = "temp_speech.mp3"
         
         # Generate speech
-        tts = gTTS(text=text, lang=lang, slow=False)
+        tts = gTTS(text=clean_text, lang=lang, slow=False)
         tts.save(temp_file)
         
         # Play the audio using VLC
@@ -496,7 +537,7 @@ def speak_with_gtts(text, lang='en'):
     except Exception as e:
         print(f"gTTS speech error: {e}")
         # Fallback to regular speak function
-        speak(text)
+        speak(clean_text)
 
 def speak_translation(text, language_code='en'):
     """
@@ -519,6 +560,10 @@ if __name__ == "__main__":
 
     while True:
         query = takeCommand().lower()
+
+        # Skip processing if the assistant couldn't understand the input
+        if query == "none":
+            continue
 
         if "weather" in query:
             speak("Name of the city:")
@@ -724,9 +769,8 @@ if __name__ == "__main__":
             continue  # Let the existing commands handle these queries
         else:
             # Any other query will be treated as a conversation with Gemini
-            if query != "None":
-                response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
-                print(response)
-                speak(response)
+            response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
+            print(response)
+            speak(response)
 
 
