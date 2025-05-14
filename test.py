@@ -316,10 +316,31 @@ apps = {
     "spotify": r"C:\Users\hp5cd\AppData\Roaming\Spotify\Spotify.exe",
     "vs code": r"C:\Users\hp5cd\AppData\Local\Programs\Microsoft VS Code\Code.exe",
     "word": r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE",
-    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
+    "excel": r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE",
+    "powerpoint": r"C:\Program Files\Microsoft Office\root\Office16\POWERPNT.EXE",
+    "outlook": r"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE",
+    "edge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
+    "photos": "ms-photos:",
+    "mail": "outlookmail:",
+    "calendar": "outlookcal:",
+    "settings": "ms-settings:",
+    "task manager": "taskmgr.exe",
+    "control panel": "control.exe",
+    "file explorer": "explorer.exe",
+    "powershell": "powershell.exe",
+    "windows media player": "wmplayer.exe",
+    "snipping tool": "SnippingTool.exe",
+    "sticky notes": "StickyNot.exe",
+    "onenote": r"C:\Program Files\Microsoft Office\root\Office16\ONENOTE.EXE",
+    "teams": r"C:\Users\hp5cd\AppData\Local\Microsoft\Teams\current\Teams.exe",
+    "discord": r"C:\Users\hp5cd\AppData\Local\Discord\app-1.0.9003\Discord.exe",
+    "zoom": r"C:\Users\hp5cd\AppData\Roaming\Zoom\bin\Zoom.exe",
+    "adobe reader": r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+    "photoshop": r"C:\Program Files\Adobe\Adobe Photoshop 2023\Photoshop.exe",
+    "illustrator": r"C:\Program Files\Adobe\Adobe Illustrator 2023\Support Files\Contents\Windows\Illustrator.exe"
     # Add more apps as needed
 }
-
 def open_app(app_name):
     for key in apps:
         if key in app_name:
