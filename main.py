@@ -541,6 +541,10 @@ if __name__ == "__main__":
     while True:
         query = takeCommand().lower()
 
+        # Skip processing if the assistant couldn't understand the input
+        if query == "none":
+            continue
+
         if "weather" in query:
             speak("Name of the city:")
             city = takeCommand()
@@ -745,9 +749,8 @@ if __name__ == "__main__":
             continue  # Let the existing commands handle these queries
         else:
             # Any other query will be treated as a conversation with Gemini
-            if query != "None":
-                response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
-                print(response)
-                speak(response)
+            response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
+            print(response)
+            speak(response)
 
 
