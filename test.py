@@ -774,5 +774,3 @@ if __name__ == "__main__":
             response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
             print(response)
             speak(response)
-
-
