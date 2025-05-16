@@ -554,6 +554,8 @@ def speak_translation(text, language_code='en'):
         if language_code == 'en':
             speak(text)
 
+
+
 # Main logic
 if __name__ == "__main__":
     greet_user()
@@ -772,5 +774,3 @@ if __name__ == "__main__":
             response = chat_with_gemini(f"Act as Vani, a friendly AI assistant. Respond to: {query}")
             print(response)
             speak(response)
-
-
