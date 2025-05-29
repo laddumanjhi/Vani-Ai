@@ -127,3 +127,9 @@
 12. **take picture and record video**
     Give a voice command to take a picture and record a video using the system camera.
     Save or delete any clicked picture using a command
+
+13. **master face detection and other's face detected**
+    first of all open the web camra and detecte the user face and find the person
+     if its know to the person "its tell the his/shis details
+   else not know the person and not respond the its user 
+
